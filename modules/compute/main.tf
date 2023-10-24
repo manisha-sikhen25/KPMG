@@ -1,8 +1,8 @@
-module "general_module" {
-    source=".././general"
-    resource_group_name = var.resource_group_name
-    location = var.location
-}
+#module "general_module" {
+#    source=".././general"
+#    resource_group_name = var.resource_group_name
+#    location = var.location
+#}
 
 resource "azurerm_network_interface" "db_interface" {
   name                = var.nic2
@@ -76,6 +76,17 @@ resource "azurerm_windows_virtual_machine" "dbvm" {
 
 }
 
+resource "azurerm_mssql_virtual_machine" "mssqlmachine1" {
+  virtual_machine_id = azurerm_windows_virtual_machine.dbvm.id
+  sql_license_type                 = "PAYG"
+  r_services_enabled               = true
+  sql_connectivity_port            = 1433
+  sql_connectivity_type            = "PRIVATE"
+  sql_connectivity_update_password = var.admin_password
+  sql_connectivity_update_username = var.admin_username
+  depends_on = [ azurerm_windows_virtual_machine.dbvm ]
+}
+
 resource "azurerm_windows_virtual_machine" "webvm" {
   name                = var.webvm_name
   resource_group_name = var.resource_group_name
@@ -94,7 +105,7 @@ resource "azurerm_windows_virtual_machine" "webvm" {
     source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2016-Datacentre"
+    sku       = "2019-Datacenter"
     version = "latest"
   }
   

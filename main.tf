@@ -28,22 +28,26 @@ module "compute_module" {
   websubnet_id = module.networking_module.appsubnet.id
   dbpublic_ip_name = local.dbpublic_ip_name
   dbvm_name = local.dbvm_name
-  admin_username = local.admin_username
-  admin_password = local.admin_password
+  admin_username = data.azurerm_key_vault_secret.secret01.value
+  admin_password = data.azurerm_key_vault_secret.secret02.value
   webvm_name = local.webvm_name
   webpublic_ip_name = local.webpublic_ip_name
   depends_on = [ module.networking_module ]
-  nic1 = local.nic1
-  
+  nic1 = local.nic1 
 
 }
 
-resource "azurerm_mssql_virtual_machine" "mssqlmachine" {
-  virtual_machine_id = module.compute_module.dbvm.id
-  sql_license_type                 = "PAYG"
-  r_services_enabled               = true
-  sql_connectivity_port            = 1433
-  sql_connectivity_type            = "PRIVATE"
-  sql_connectivity_update_password = "Mother&)25071987"
-  sql_connectivity_update_username = "adminlab"
+data "azurerm_key_vault" "kv01" {
+  name                = local.kvname
+  resource_group_name = local.resource_group_name
+}
+
+data "azurerm_key_vault_secret" "secret01" {
+  name         = "username"
+  key_vault_id = data.azurerm_key_vault.kv01.id
+}
+
+data "azurerm_key_vault_secret" "secret02" {
+  name         = "password"
+  key_vault_id = data.azurerm_key_vault.kv01.id
 }

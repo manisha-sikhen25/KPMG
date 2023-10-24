@@ -11,12 +11,13 @@ locals {
   nsg_db_name = "db-nsg"
   nic2 = "db-nic"
   nic1 = "web-nic"
-  admin_username = "adminlab"
-  admin_password = "Mother&)25071987"
+  #admin_username = "adminlab"
+  #admin_password = "Mother&)25071987"
   dbvm_name = "dbtier"
   dbpublic_ip_name = "db_ip"
   webvm_name = "webtier"
   webpublic_ip_name = "web_ip"
+  kvname = "kv10000"
 
 }
 
