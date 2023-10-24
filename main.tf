@@ -1,109 +1,49 @@
 module "general_module" {
-    source=".././general"
-    resource_group_name = var.resource_group_name
-    location = var.location
+    source="./modules/general"
+    resource_group_name = local.resource_group_name
+    location = local.location
 }
 
+module "networking_module" {
+source = "./modules/Networking"
+resource_group_name = local.resource_group_name
+location = local.location
+virtual_network_name = local.virtual_network_name
+virtual_address_space = local.virtual_address_space
+app_subnet_name = local.app_subnet_name
+appsubnet_address_space = local.appsubnet_address_space
+db_subnet_name = local.db_subnet_name
+dbsubnet_address_space =  local.dbsubnet_address_space
+nsg_web_name = local.nsg_web_name
+nsg_db_name = local.nsg_db_name
 
-resource "azurerm_virtual_network" "network" {
-  name = var.virtual_network_name
-  location = var.location
-  resource_group_name = var.resource_group_name
-  address_space = [var.virtual_address_space]
-  depends_on = [ 
-    module.general_module.resourcegroup
-   ]
 }
 
-resource "azurerm_subnet" "appsubnet" {
-    name = var.app_subnet_name
-    resource_group_name = var.resource_group_name
-    virtual_network_name =   var.virtual_network_name
-    address_prefixes = [ var.appsubnet_address_space  ]
-    depends_on = [
-        azurerm_virtual_network.network
-     ]
+module "compute_module" {
+  source = "./modules/compute"
+  resource_group_name = local.resource_group_name
+  location = local.location
+  nic2 = local.nic2
+  dbsubnet_id = module.networking_module.dbsubnet.id
+  websubnet_id = module.networking_module.appsubnet.id
+  dbpublic_ip_name = local.dbpublic_ip_name
+  dbvm_name = local.dbvm_name
+  admin_username = local.admin_username
+  admin_password = local.admin_password
+  webvm_name = local.webvm_name
+  webpublic_ip_name = local.webpublic_ip_name
+  depends_on = [ module.networking_module ]
+  nic1 = local.nic1
+  
+
 }
 
-resource "azurerm_subnet" "dbsubnet" {
-    name = var.db_subnet_name
-    resource_group_name = var.resource_group_name
-    virtual_network_name =   var.virtual_network_name
-    address_prefixes = [ var.dbsubnet_address_space]
-    depends_on = [
-        azurerm_virtual_network.network
-     ]
-}
-
-resource "azurerm_network_security_group" "nsg-web" {
-     name = var.nsg_web_name
-     location = var.location
-     resource_group_name = var.resource_group_name
-     depends_on = [ azurerm_virtual_network.network ]
-
-     security_rule {
-        name                       = "RDPrule"
-        priority                   = 100
-        direction                  = "Inbound"
-        access                     = "Allow"
-        protocol                   = "Tcp"
-        source_port_range          = "*"
-        destination_port_range     = "3389"
-        source_address_prefix      = "*"
-        destination_address_prefix = "*"
-    }
-    security_rule {
-        name                       = "httprule"
-        priority                   = 200
-        direction                  = "Inbound"
-        access                     = "Allow"
-        protocol                   = "Tcp"
-        source_port_range          = "*"
-        destination_port_range     = "80"
-        source_address_prefix      = "*"
-        destination_address_prefix = "*"
-  }
-
-  security_rule {
-        name                       = "vscrule"
-        priority                   = 300
-        direction                  = "Inbound"
-        access                     = "Allow"
-        protocol                   = "Tcp"
-        source_port_range          = "*"
-        destination_port_range     = "3389"
-        source_address_prefix      = "*"
-        destination_address_prefix = "*"
-  }
-}
-
-resource "azurerm_network_security_group" "nsg-db" {
-     name = var.nsg_db_name
-     location = var.location
-     resource_group_name = var.resource_group_name
-     depends_on = [ azurerm_virtual_network.network ]
-
-     security_rule {
-        name                       = "RDPrule"
-        priority                   = 100
-        direction                  = "Inbound"
-        access                     = "Allow"
-        protocol                   = "Tcp"
-        source_port_range          = "*"
-        destination_port_range     = "3389"
-        source_address_prefix      = "*"
-        destination_address_prefix = "*"
-    }
-}
-
-resource "azurerm_subnet_network_security_group_association" "nsgtowebsubnet" {
-  subnet_id                 = azurerm_subnet.appsubnet.id
-  network_security_group_id = azurerm_network_security_group.nsg-web.id
-  depends_on = [ azurerm_virtual_network.network,azurerm_network_security_group.nsg-web ]
-}
-
-resource "azurerm_subnet_network_security_group_association" "nsgtodbsubnet" {
-  subnet_id                 = azurerm_subnet.dbsubnet.id
-  network_security_group_id = azurerm_network_security_group.nsg-db.id
-  depends_on = [ azurerm_virtual_network.network,azurerm_network_security_group.nsg-db ]
+resource "azurerm_mssql_virtual_machine" "mssqlmachine" {
+  virtual_machine_id = module.compute_module.dbvm.id
+  sql_license_type                 = "PAYG"
+  r_services_enabled               = true
+  sql_connectivity_port            = 1433
+  sql_connectivity_type            = "PRIVATE"
+  sql_connectivity_update_password = "Mother&)25071987"
+  sql_connectivity_update_username = "adminlab"
 }
